@@ -1,47 +1,87 @@
-import os
-from dotenv import load_dotenv
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI
+"""
+Enterprise Knowledge Copilot — Interactive CLI
+----------------------------------------------
+Interactive command-line assistant for querying corporate policies,
+benefits, travel limits, security standards, and customer SLAs.
+"""
 
-# 1. Charger la clé API secrète depuis le fichier .env
-load_dotenv()
+import sys
+import textwrap
+from rag_engine import EnterpriseRAGEngine
 
-def poser_question(question):
-    print("1. Traduction de la question et recherche dans ChromaDB...")
-    # On prépare la base de données
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    db = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
-    
-    # On récupère les 3 meilleurs extraits
-    resultats = db.similarity_search(question, k=3)
-    
-    # On rassemble ces 3 extraits en un seul gros texte (le contexte)
-    contexte_trouve = "\n\n".join([doc.page_content for doc in resultats])
-    
-    print("2. Envoi des extraits au LLM (Google Gemini) pour rédaction...\n")
-    
-    # On initialise le LLM
-    llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash")
 
-    # On construit le "Prompt" (les instructions strictes pour le LLM)
-    prompt = f"""
-    Tu es un expert technique. Réponds à la question posée en te basant UNIQUEMENT sur le contexte ci-dessous. 
-    Ne tire aucune information de tes connaissances générales. Si la réponse ne figure pas dans le contexte, dis simplement "L'information n'est pas dans le document".
-    
-    CONTEXTE :
-    {contexte_trouve}
-    
-    QUESTION : {question}
+def print_banner():
+    """Display welcome screen and usage instructions."""
+    banner = """
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║      🏢 APEX GLOBAL TECHNOLOGIES — ENTERPRISE KNOWLEDGE COPILOT   ║
+    ║   AI-Powered Policy, HR, Travel, Procurement & SLA Assistant     ║
+    ╚══════════════════════════════════════════════════════════════════╝
     """
-    
-    # Le LLM lit le prompt et génère la réponse finale
-    reponse = llm.invoke(prompt)
-    
-    print("================ RÉPONSE FINALE ================")
-    print(reponse.content)
-    print("================================================\n")
+    print(textwrap.dedent(banner))
+    print("💡 Quick tips:")
+    print("   • Ask questions about PTO, flight policies, spending limits, SLAs, or security.")
+    print("   • Type 'clear' to reset conversation memory.")
+    print("   • Type 'exit', 'quit', or 'q' to close the assistant.\n")
+    print("-" * 70)
+
+
+def main():
+    try:
+        engine = EnterpriseRAGEngine()
+    except Exception as err:
+        print(f"\n❌ Startup Error: {err}")
+        print("Please ensure your GOOGLE_API_KEY is set in .env and you have run 'python load_docs.py'.")
+        sys.exit(1)
+
+    print_banner()
+
+    chat_history = []
+
+    while True:
+        try:
+            user_input = input("\n👤 You: ").strip()
+
+            # Handle empty prompts
+            if not user_input:
+                continue
+
+            # Handle exit commands
+            if user_input.lower() in ["exit", "quit", "q", "quitter"]:
+                print("\n👋 Goodbye! Have a productive day at Apex Global.\n")
+                break
+
+            # Handle reset command
+            if user_input.lower() in ["clear", "reset"]:
+                chat_history.clear()
+                print("🔄 Conversation memory cleared. Ready for a new topic!")
+                continue
+
+            print("\n🔍 Searching policy documents & formulating response...")
+            result = engine.query(user_input, chat_history=chat_history)
+
+            # Display answer
+            print("\n🤖 Copilot:")
+            print(result["answer"])
+
+            # Display consulted sources
+            if result.get("sources"):
+                print("\n📚 Sources Consulted:")
+                for src in result["sources"]:
+                    print(f"   • {src['title']} ({src['file']})")
+
+            print("-" * 70)
+
+            # Save to conversation memory
+            chat_history.append({"role": "user", "content": user_input})
+            chat_history.append({"role": "assistant", "content": result["answer"]})
+
+        except KeyboardInterrupt:
+            print("\n\nSession terminated by user. Goodbye!")
+            break
+        except Exception as err:
+            print(f"\n⚠️ An unexpected error occurred: {err}")
+
 
 if __name__ == "__main__":
-    ma_question = "Quels sont les outils utilisés dans cette plateforme ?"
-    poser_question(ma_question)
+    main()

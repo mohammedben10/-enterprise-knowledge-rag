@@ -1,24 +1,39 @@
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+"""
+Quick Similarity Search Verification
+------------------------------------
+Tests direct semantic retrieval against the ChromaDB vector database.
+"""
 
-def tester_recherche():
-    # 1. On charge le même modèle de traduction mathématique
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    
-    # 2. On se connecte à ta base de données stockée sur le disque
-    db = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
-    
-    # 3. La question (à modifier selon le contenu de ton document !)
-    question = "Quels sont les outils utilisés dans cette plateforme ?"
-    
-    # 4. On demande à ChromaDB de trouver les 3 morceaux les plus pertinents (k=3)
-    resultats = db.similarity_search(question, k=3)
-    
-    print(f"Question posée : '{question}'\n")
-    for i, doc in enumerate(resultats):
-        print(f"--- Extrait trouvé n°{i+1} ---")
-        print(doc.page_content)
-        print("-" * 30 + "\n")
+import os
+os.environ["ANONYMOUS_TELEMETRY"] = "False"
+
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import Chroma
+import config
+
+
+def test_quick_search():
+    print(f"Connecting to embedding model '{config.EMBEDDING_MODEL}'...")
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model=config.EMBEDDING_MODEL,
+        google_api_key=config.GOOGLE_API_KEY
+    )
+
+    print(f"Connecting to ChromaDB collection '{config.COLLECTION_NAME}'...")
+    db = Chroma(
+        collection_name=config.COLLECTION_NAME,
+        persist_directory=str(config.CHROMA_DIR),
+        embedding_function=embeddings
+    )
+
+    query = "What is the policy for booking flights over 6 hours?"
+    print(f"\n🔎 Query: '{query}'")
+    results = db.similarity_search(query, k=2)
+
+    for i, doc in enumerate(results, start=1):
+        print(f"\n--- Result #{i} from: {doc.metadata.get('source')} ---")
+        print(doc.page_content[:300] + "...\n")
+
 
 if __name__ == "__main__":
-    tester_recherche()
+    test_quick_search()

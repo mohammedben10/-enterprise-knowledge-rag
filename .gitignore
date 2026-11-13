@@ -1,0 +1,29 @@
+# Environment variables and secrets
+.env
+*.env.local
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Vector database binaries and indexes
+chroma_db/
+*.sqlite3
+*.bin
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
