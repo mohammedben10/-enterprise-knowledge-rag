@@ -65,7 +65,7 @@ class EnterpriseRAGEngine:
         End-to-end RAG query:
         1. Retrieve relevant company policy chunks.
         2. Format multi-turn conversation context.
-        3. Call Gemini to generate a verified, sourced response.
+        3. Call Gemini to generate a verified, sourced response with fallback support.
         """
         # 1. Retrieve relevant policy sections
         retrieved_docs = self.retrieve(question)
@@ -128,20 +128,32 @@ QUESTION: {question}
 OFFICIAL POLICY ANSWER:
 """.strip()
 
-        # 5. Invoke Google Gemini with resilient retry
-        answer_text = "No response generated."
-        for attempt in range(2):
-            try:
-                response = self.ai_client.models.generate_content(
-                    model=self.model_name,
-                    contents=user_prompt
-                )
-                answer_text = response.text.strip() if response.text else "No response generated."
+        # 5. Invoke Google Gemini with candidate fallback models in case of demand spikes (503)
+        candidate_models = [self.model_name]
+        if "gemini-3.5-flash-lite" not in candidate_models:
+            candidate_models.append("gemini-3.5-flash-lite")
+
+        last_error = None
+        answer_text = None
+
+        for model in candidate_models:
+            for attempt in range(2):
+                try:
+                    response = self.ai_client.models.generate_content(
+                        model=model,
+                        contents=user_prompt
+                    )
+                    if response.text:
+                        answer_text = response.text.strip()
+                        break
+                except Exception as err:
+                    last_error = err
+                    time.sleep(1)
+            if answer_text:
                 break
-            except Exception as e:
-                if attempt == 1:
-                    raise
-                time.sleep(1.5)
+
+        if not answer_text:
+            raise RuntimeError(f"All LLM generation attempts failed: {last_error}")
 
         return {
             "question": question,

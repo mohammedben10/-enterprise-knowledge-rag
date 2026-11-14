@@ -77,7 +77,7 @@ def health():
     return {
         "status": "healthy",
         "model": config.GEMINI_MODEL,
-        "embedding_model": config.EMBEDDING_MODEL_NAME,
+        "embedding_model": config.EMBEDDING_MODEL,
         "collection": config.COLLECTION_NAME
     }
 
