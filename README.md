@@ -137,7 +137,23 @@ python load_docs.py
 
 ## 💬 Running the Assistant
 
-### Mode A: Interactive Command Line (CLI)
+### Mode A: Interactive Web UI (Recommended)
+Launch the server to access the full-featured, responsive browser interface:
+```bash
+uvicorn api:app --reload --port 8000
+```
+Open **[http://localhost:8000](http://localhost:8000)** in your browser.
+
+✨ **Web Interface Features**:
+- **Modern Chat Stream**: Clean conversational UI with markdown formatting, bold text, and bullet lists.
+- **Transparent Citations**: Every answer includes clickable policy source badges (`[Source: HR Policies & Benefits]`).
+- **Quick-Prompt Suggestions**: One-click prompt pills for common questions (flights, parental leave, spending approvals, SLAs).
+- **Live Policy Drawer**: Sidebar dynamically lists all active corporate documents loaded in the vector database.
+- **Session Memory**: Natural follow-up questions with a "Clear Chat" button to reset context.
+
+---
+
+### Mode B: Interactive Command Line (CLI)
 Chat directly with the business assistant in your terminal:
 ```bash
 python app.py
@@ -169,8 +185,8 @@ For international business travel, the daily per-diem meal allowance is $120 per
 
 ---
 
-### Mode B: REST API (FastAPI)
-Launch the API server for intranet or Slackbot integrations:
+### Mode C: REST API (FastAPI)
+Launch the API server for intranet, Slackbot, or Teams integrations:
 ```bash
 uvicorn api:app --reload --port 8000
 ```

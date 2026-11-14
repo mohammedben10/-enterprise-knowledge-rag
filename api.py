@@ -8,6 +8,8 @@ to query Apex Global corporate knowledge and policy guidelines.
 from typing import List, Dict, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import config
@@ -16,9 +18,14 @@ from load_docs import load_markdown_documents
 
 app = FastAPI(
     title="Apex Global — Enterprise Knowledge Copilot API",
-    description="REST API for querying company policies, HR benefits, IT security, and customer SLAs.",
+    description="REST API and Interactive Web Interface for querying company policies, HR benefits, IT security, and customer SLAs.",
     version="1.0.0"
 )
+
+# Mount static folder for web UI assets
+static_dir = config.BASE_DIR / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Enable CORS for internal frontend portals or dashboards
 app.add_middleware(
@@ -63,8 +70,12 @@ class AskResponse(BaseModel):
     retrieved_chunks_count: int
 
 
-@app.get("/", tags=["Health"])
-def root():
+@app.get("/", include_in_schema=False)
+def serve_home():
+    """Serve the interactive web interface."""
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return {
         "service": "Apex Global Enterprise Knowledge Copilot",
         "status": "online",
